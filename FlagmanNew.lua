@@ -1,5 +1,5 @@
 --[[
-  РАДУЖНОЕ МЕНЮ "НИКИТА ЛОХ"
+  SergeiXuesos MENU
   Функции: Aimbot, Fly, Noclip
   Открытие: X, M, Insert
   Меню по центру экрана
@@ -18,18 +18,17 @@ local Camera = Workspace.CurrentCamera
 -- GUI (ПО ЦЕНТРУ)
 -- ============================================
 local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "NikitaLohGui"
+screenGui.Name = "SergeiXuesosGui"
 screenGui.ResetOnSpawn = false
 screenGui.Parent = CoreGui
 
 local mainFrame = Instance.new("Frame")
-mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 320, 0, 420)
-mainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)  -- ПО ЦЕНТРУ
-mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-mainFrame.BackgroundTransparency = 0.15
+mainFrame.Size = UDim2.new(0, 340, 0, 440)
+mainFrame.Position = UDim2.new(0.5, -170, 0.5, -220)
+mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
+mainFrame.BackgroundTransparency = 0.1
 mainFrame.BorderSizePixel = 2
-mainFrame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+mainFrame.BorderColor3 = Color3.fromRGB(255, 0, 100)
 mainFrame.ClipsDescendants = true
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
@@ -38,12 +37,12 @@ mainFrame.Parent = screenGui
 local titleLabel = Instance.new("TextLabel")
 titleLabel.Size = UDim2.new(1, 0, 0, 45)
 titleLabel.Position = UDim2.new(0, 0, 0, 0)
-titleLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+titleLabel.BackgroundColor3 = Color3.fromRGB(40, 20, 50)
 titleLabel.BackgroundTransparency = 0.5
-titleLabel.Text = "НИКИТА ЛОХ"
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.Text = "✦ SERGEI XUESOS ✦"
+titleLabel.TextColor3 = Color3.fromRGB(255, 100, 200)
 titleLabel.TextScaled = true
-titleLabel.Font = Enum.Font.Bold
+titleLabel.Font = Enum.Font.GothamBold
 titleLabel.Parent = mainFrame
 
 -- Кнопка закрытия
@@ -54,14 +53,14 @@ closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
 closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextScaled = true
-closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.Font = Enum.Font.GothamBold
 closeBtn.Parent = mainFrame
 closeBtn.MouseButton1Click:Connect(function()
     mainFrame.Visible = false
 end)
 
 -- ============================================
--- РАДУГА
+-- РАДУГА (НЕОН)
 -- ============================================
 RunService.Heartbeat:Connect(function()
     local hue = tick() % 2 / 2
@@ -86,27 +85,25 @@ local function createButton(name, y)
     btn.Name = name
     btn.Size = UDim2.new(0.8, 0, 0, 40)
     btn.Position = UDim2.new(0.1, 0, 0, y)
-    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    btn.BackgroundColor3 = Color3.fromRGB(40, 30, 50)
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.Text = name .. " [OFF]"
     btn.TextScaled = true
-    btn.Font = Enum.Font.SourceSansBold
+    btn.Font = Enum.Font.GothamMedium
     btn.Parent = mainFrame
     buttonRefs[name] = btn
     
     btn.MouseEnter:Connect(function()
-        local hue = tick() % 2 / 2
-        btn.BackgroundColor3 = Color3.fromHSV(hue, 0.8, 0.8)
+        btn.BackgroundColor3 = Color3.fromRGB(60, 40, 70)
     end)
-    
     btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+        btn.BackgroundColor3 = Color3.fromRGB(40, 30, 50)
     end)
     
     btn.MouseButton1Click:Connect(function()
         toggles[name] = not toggles[name]
         btn.Text = name .. (toggles[name] and " [ON]" or " [OFF]")
-        btn.TextColor3 = toggles[name] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+        btn.TextColor3 = toggles[name] and Color3.fromRGB(0, 255, 100) or Color3.fromRGB(255, 255, 255)
         
         if name == "Fly" then
             toggleFly()
@@ -116,9 +113,9 @@ local function createButton(name, y)
     end)
 end
 
-createButton("Aimbot", 60)
-createButton("Fly", 110)
-createButton("Noclip", 160)
+createButton("Aimbot", 65)
+createButton("Fly", 115)
+createButton("Noclip", 165)
 
 -- ============================================
 -- ОТКРЫТИЕ ПО X, M, Insert
@@ -129,13 +126,9 @@ end
 
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.X then
-        toggleMenu()
-    elseif input.KeyCode == Enum.KeyCode.M then
-        toggleMenu()
-    elseif input.KeyCode == Enum.KeyCode.Insert then
-        toggleMenu()
-    end
+    if input.KeyCode == Enum.KeyCode.X then toggleMenu()
+    elseif input.KeyCode == Enum.KeyCode.M then toggleMenu()
+    elseif input.KeyCode == Enum.KeyCode.Insert then toggleMenu() end
 end)
 
 -- ============================================
@@ -207,11 +200,7 @@ local function updateFly()
     if flyKeys.Shift then vel = vel - up end
     
     if flyVelocity then
-        if vel.Magnitude > 0 then
-            flyVelocity.Velocity = vel.Unit * 50
-        else
-            flyVelocity.Velocity = Vector3.new(0, 0, 0)
-        end
+        flyVelocity.Velocity = vel.Magnitude > 0 and vel.Unit * 50 or Vector3.new(0, 0, 0)
     end
     
     if flyGyro then
@@ -232,7 +221,6 @@ local function toggleFly()
         
         flyVelocity = Instance.new("BodyVelocity")
         flyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)
-        flyVelocity.Velocity = Vector3.new(0, 0, 0)
         flyVelocity.Parent = root
         
         flyGyro = Instance.new("BodyGyro")
@@ -334,7 +322,7 @@ LocalPlayer.CharacterAdded:Connect(function()
 end)
 
 print("═══════════════════════════════════════")
-print("  ✦ МЕНЮ НИКИТА ЛОХ ЗАГРУЖЕНО ✦")
+print("  ✦ SERGEI XUESOS MENU ✦")
 print("  Открытие: X, M, Insert")
 print("  Меню по центру экрана")
 print("═══════════════════════════════════════")
