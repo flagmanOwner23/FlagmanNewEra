@@ -1,5 +1,6 @@
--- SergeiXuesos v2.0
--- Fly, Noclip, Spider, ESP, Binds, Поиск, Размытие
+-- SergeiXuesos v3.0
+-- Fly, Fly X2, Noclip, Spider, ESP, Aimbot, Бинды, Поиск, Размытие
+-- Добавлена кнопка "Донат" (без функций)
 -- Автор: SergeiXuesos
 
 local Players = game:GetService("Players")
@@ -22,22 +23,29 @@ local RootPart = Character:WaitForChild("HumanoidRootPart")
 -- ============================================
 local toggles = {
     Fly = false,
+    FlyX2 = false,
     Noclip = false,
     Spider = false,
-    ESP = false
+    ESP = false,
+    Aimbot = false
 }
 
 local flySpeed = 50
+local flyX2Speed = 100
 local flyConnection = nil
 local bodyVelocity = nil
 local bodyGyro = nil
 local flyKeys = {W=false, A=false, S=false, D=false, Space=false, Shift=false}
 
+local flyX2Connection = nil
+local flyX2BodyVelocity = nil
+local flyX2BodyGyro = nil
+local flyX2Keys = {W=false, A=false, S=false, D=false, Space=false, Shift=false}
+
 local noclipConnection = nil
 local noclipPart = nil
 
 local spiderConnection = nil
-local spiderActive = false
 
 local espObjects = {}
 local espConnections = {}
@@ -53,7 +61,6 @@ ScreenGui.Name = "SergeiXuesosGui"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.Parent = CoreGui
 
--- Размытие
 local Blur = Instance.new("BlurEffect")
 Blur.Size = 0
 Blur.Parent = Lighting
@@ -64,10 +71,9 @@ local function applyBlur(enabled)
     }):Play()
 end
 
--- Основное меню (центр)
 local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
+MainFrame.Size = UDim2.new(0, 420, 0, 550)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -275)
 MainFrame.BackgroundColor3 = Color3.fromRGB(20, 10, 35)
 MainFrame.BackgroundTransparency = 0.15
 MainFrame.BorderSizePixel = 2
@@ -76,7 +82,6 @@ MainFrame.ClipsDescendants = true
 MainFrame.Visible = false
 MainFrame.Parent = ScreenGui
 
--- Плавное открытие
 local function toggleMenu()
     MainFrame.Visible = not MainFrame.Visible
     if MainFrame.Visible then
@@ -88,7 +93,6 @@ local function toggleMenu()
     end
 end
 
--- Заголовок
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 50)
 Title.Position = UDim2.new(0, 0, 0, 0)
@@ -100,7 +104,6 @@ Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
 
--- Кнопка закрытия
 local CloseBtn = Instance.new("TextButton")
 CloseBtn.Size = UDim2.new(0.15, 0, 0, 30)
 CloseBtn.Position = UDim2.new(0.85, -5, 0, 10)
@@ -112,7 +115,6 @@ CloseBtn.Font = Enum.Font.GothamBold
 CloseBtn.Parent = MainFrame
 CloseBtn.MouseButton1Click:Connect(toggleMenu)
 
--- Поиск
 local SearchBox = Instance.new("TextBox")
 SearchBox.Size = UDim2.new(0.9, 0, 0, 35)
 SearchBox.Position = UDim2.new(0.05, 0, 0, 55)
@@ -128,7 +130,6 @@ SearchBox.BorderSizePixel = 1
 SearchBox.BorderColor3 = Color3.fromRGB(180, 100, 255)
 SearchBox.Parent = MainFrame
 
--- Контейнер кнопок
 local ButtonContainer = Instance.new("ScrollingFrame")
 ButtonContainer.Size = UDim2.new(0.9, 0, 1, -110)
 ButtonContainer.Position = UDim2.new(0.05, 0, 0, 95)
@@ -143,7 +144,6 @@ UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = ButtonContainer
 
 local allButtons = {}
-local buttonRefs = {}
 
 -- ============================================
 -- КНОПКИ
@@ -168,24 +168,23 @@ local function createButton(text, callback)
     end)
     
     btn.MouseButton1Click:Connect(function()
-        callback()
+        if callback then callback() end
         btn.BackgroundColor3 = Color3.fromRGB(100, 255, 100)
         task.wait(0.1)
         btn.BackgroundColor3 = Color3.fromRGB(40, 30, 60)
     end)
     
-    -- БИНД: ПКМ → сразу нажать клавишу (без диалога)
     btn.MouseButton2Click:Connect(function()
-        bindWaiting = callback
-        print("[SergeiXuesos] ⏳ Нажмите клавишу для бинда...")
+        if callback then
+            bindWaiting = callback
+            print("[SergeiXuesos] ⏳ Нажмите клавишу для бинда...")
+        end
     end)
     
     table.insert(allButtons, {button = btn, text = text:lower()})
-    buttonRefs[text] = btn
     return btn
 end
 
--- Поиск
 local function updateSearch(query)
     query = query:lower()
     local count = 0
@@ -205,7 +204,7 @@ SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
 end)
 
 -- ============================================
--- FLY (WASD + Space/Shift)
+-- FLY (ОБЫЧНЫЙ)
 -- ============================================
 local function updateFly()
     if not toggles.Fly or not RootPart then return end
@@ -231,6 +230,7 @@ local function updateFly()
 end
 
 local function toggleFly()
+    if toggles.FlyX2 then toggleFlyX2() end
     toggles.Fly = not toggles.Fly
     if toggles.Fly then
         if bodyVelocity then bodyVelocity:Destroy() end
@@ -263,6 +263,62 @@ local function setFlySpeed(val)
     print("[SergeiXuesos] Fly Speed: " .. flySpeed)
 end
 
+-- ============================================
+-- FLY X2 (В 2 РАЗА БЫСТРЕЕ)
+-- ============================================
+local function updateFlyX2()
+    if not toggles.FlyX2 or not RootPart then return end
+    local dir = Vector3.new(0, 0, 0)
+    local cf = Camera.CFrame
+    local forward = cf.LookVector
+    local right = cf.RightVector
+    local up = Vector3.new(0, 1, 0)
+    
+    if flyX2Keys.W then dir = dir + forward end
+    if flyX2Keys.S then dir = dir - forward end
+    if flyX2Keys.A then dir = dir - right end
+    if flyX2Keys.D then dir = dir + right end
+    if flyX2Keys.Space then dir = dir + up end
+    if flyX2Keys.Shift then dir = dir - up end
+    
+    if dir.Magnitude > 0 then
+        dir = dir.Unit * flyX2Speed
+    end
+    if flyX2BodyVelocity then
+        flyX2BodyVelocity.Velocity = dir
+    end
+end
+
+local function toggleFlyX2()
+    if toggles.Fly then toggleFly() end
+    toggles.FlyX2 = not toggles.FlyX2
+    if toggles.FlyX2 then
+        if flyX2BodyVelocity then flyX2BodyVelocity:Destroy() end
+        if flyX2BodyGyro then flyX2BodyGyro:Destroy() end
+        if flyX2Connection then flyX2Connection:Disconnect() end
+        
+        flyX2BodyVelocity = Instance.new("BodyVelocity")
+        flyX2BodyVelocity.MaxForce = Vector3.new(1, 1, 1) * 100000
+        flyX2BodyVelocity.Parent = RootPart
+        
+        flyX2BodyGyro = Instance.new("BodyGyro")
+        flyX2BodyGyro.MaxTorque = Vector3.new(1, 1, 1) * 100000
+        flyX2BodyGyro.CFrame = RootPart.CFrame
+        flyX2BodyGyro.Parent = RootPart
+        
+        flyX2Connection = RunService.Heartbeat:Connect(updateFlyX2)
+        Humanoid.PlatformStand = true
+        print("[SergeiXuesos] Fly X2 ON")
+    else
+        if flyX2BodyVelocity then flyX2BodyVelocity:Destroy() flyX2BodyVelocity = nil end
+        if flyX2BodyGyro then flyX2BodyGyro:Destroy() flyX2BodyGyro = nil end
+        if flyX2Connection then flyX2Connection:Disconnect() flyX2Connection = nil end
+        Humanoid.PlatformStand = false
+        print("[SergeiXuesos] Fly X2 OFF")
+    end
+end
+
+-- Клавиши для Fly и Fly X2
 UserInputService.InputBegan:Connect(function(inp, gp)
     if gp then return end
     if toggles.Fly then
@@ -272,6 +328,14 @@ UserInputService.InputBegan:Connect(function(inp, gp)
         if inp.KeyCode == Enum.KeyCode.D then flyKeys.D = true end
         if inp.KeyCode == Enum.KeyCode.Space then flyKeys.Space = true end
         if inp.KeyCode == Enum.KeyCode.LeftShift then flyKeys.Shift = true end
+    end
+    if toggles.FlyX2 then
+        if inp.KeyCode == Enum.KeyCode.W then flyX2Keys.W = true end
+        if inp.KeyCode == Enum.KeyCode.A then flyX2Keys.A = true end
+        if inp.KeyCode == Enum.KeyCode.S then flyX2Keys.S = true end
+        if inp.KeyCode == Enum.KeyCode.D then flyX2Keys.D = true end
+        if inp.KeyCode == Enum.KeyCode.Space then flyX2Keys.Space = true end
+        if inp.KeyCode == Enum.KeyCode.LeftShift then flyX2Keys.Shift = true end
     end
 end)
 
@@ -284,6 +348,14 @@ UserInputService.InputEnded:Connect(function(inp, gp)
         if inp.KeyCode == Enum.KeyCode.D then flyKeys.D = false end
         if inp.KeyCode == Enum.KeyCode.Space then flyKeys.Space = false end
         if inp.KeyCode == Enum.KeyCode.LeftShift then flyKeys.Shift = false end
+    end
+    if toggles.FlyX2 then
+        if inp.KeyCode == Enum.KeyCode.W then flyX2Keys.W = false end
+        if inp.KeyCode == Enum.KeyCode.A then flyX2Keys.A = false end
+        if inp.KeyCode == Enum.KeyCode.S then flyX2Keys.S = false end
+        if inp.KeyCode == Enum.KeyCode.D then flyX2Keys.D = false end
+        if inp.KeyCode == Enum.KeyCode.Space then flyX2Keys.Space = false end
+        if inp.KeyCode == Enum.KeyCode.LeftShift then flyX2Keys.Shift = false end
     end
 end)
 
@@ -326,7 +398,7 @@ local function toggleNoclip()
 end
 
 -- ============================================
--- SPIDER (РЫВОК ПО ТЕКСТУРЕ)
+-- SPIDER
 -- ============================================
 local function toggleSpider()
     toggles.Spider = not toggles.Spider
@@ -410,7 +482,50 @@ local function toggleESP()
 end
 
 -- ============================================
--- БИНДЫ (ПКМ → клавиша, без диалога)
+-- AIMBOT (РАБОЧИЙ)
+-- ============================================
+local function getNearestPlayer()
+    if not LocalPlayer or not LocalPlayer.Character then return nil end
+    local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    
+    local nearest = nil
+    local minDist = math.huge
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local targetRoot = player.Character.HumanoidRootPart
+            local dist = (root.Position - targetRoot.Position).Magnitude
+            if dist < minDist then
+                minDist = dist
+                nearest = player
+            end
+        end
+    end
+    return nearest
+end
+
+local function toggleAimbot()
+    toggles.Aimbot = not toggles.Aimbot
+    print("[SergeiXuesos] Aimbot " .. (toggles.Aimbot and "ON" or "OFF"))
+end
+
+RunService.RenderStepped:Connect(function()
+    if toggles.Aimbot then
+        local target = getNearestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local targetRoot = target.Character.HumanoidRootPart
+                local direction = (targetRoot.Position - root.Position).Unit
+                root.CFrame = CFrame.new(root.Position, root.Position + direction * 10)
+            end
+        end
+    end
+end)
+
+-- ============================================
+-- БИНДЫ
 -- ============================================
 UserInputService.InputBegan:Connect(function(inp, gp)
     if gp then return end
@@ -448,9 +563,15 @@ createButton("Fly Speed 100", function() setFlySpeed(100) end)
 createButton("Fly Speed 150", function() setFlySpeed(150) end)
 createButton("Fly Speed 200", function() setFlySpeed(200) end)
 
+createButton("Fly X2 (WASD + Space/Shift)", toggleFlyX2)
+
 createButton("Noclip", toggleNoclip)
-createButton("Spider (рынок по текстуре)", toggleSpider)
+createButton("Spider (рывок по текстуре)", toggleSpider)
 createButton("ESP (фиолетовый)", toggleESP)
+createButton("Aimbot", toggleAimbot)
+
+-- КНОПКА ДОНАТ (НИЧЕГО НЕ ДЕЛАЕТ)
+createButton("💎 Донат (ничего не делает)", nil)
 
 createButton("Kill All", function()
     for _, plr in ipairs(Players:GetPlayers()) do
@@ -528,13 +649,18 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
     RootPart = Character:WaitForChild("HumanoidRootPart")
     
     toggles.Fly = false
+    toggles.FlyX2 = false
     toggles.Noclip = false
     toggles.Spider = false
     toggles.ESP = false
+    toggles.Aimbot = false
     
     if bodyVelocity then bodyVelocity:Destroy() bodyVelocity = nil end
     if bodyGyro then bodyGyro:Destroy() bodyGyro = nil end
     if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+    if flyX2BodyVelocity then flyX2BodyVelocity:Destroy() flyX2BodyVelocity = nil end
+    if flyX2BodyGyro then flyX2BodyGyro:Destroy() flyX2BodyGyro = nil end
+    if flyX2Connection then flyX2Connection:Disconnect() flyX2Connection = nil end
     if noclipConnection then noclipConnection:Disconnect() noclipConnection = nil end
     if noclipPart then noclipPart:Destroy() noclipPart = nil end
     if spiderConnection then spiderConnection:Disconnect() spiderConnection = nil end
@@ -547,8 +673,9 @@ LocalPlayer.CharacterAdded:Connect(function(newChar)
 end)
 
 print("═══════════════════════════════════════")
-print("  ✦ SERGEI XUESOS v2.0 ✦")
+print("  ✦ SERGEI XUESOS v3.0 ✦")
 print("  Открытие: X, M, Insert")
 print("  БИНДЫ: ПКМ на кнопке → нажать клавишу")
 print("  DELETE - снять бинд")
+print("  FLY X2 - в 2 раза быстрее")
 print("═══════════════════════════════════════")
