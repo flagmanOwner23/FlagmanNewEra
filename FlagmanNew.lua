@@ -1,11 +1,11 @@
 -- Flagman New.lua
--- Полностью оригинальный скрипт с меню, Scaffold, Spider и другими функциями
--- Версия 1.0
+-- Открытие по Insert
+-- Версия 1.1
 -- Автор: good
 
 local Flagman = {
     Name = "Flagman New",
-    Version = "1.0",
+    Version = "1.1",
     Author = "good"
 }
 
@@ -121,8 +121,7 @@ local function toggleNoclip()
         RunService.Heartbeat:Connect(function()
             if noclipEnabled and RootPart then
                 noclipPart.Position = RootPart.Position
-            end
-        end)
+            endend)
         print("[Flagman] Noclip ON")
     else
         if noclipPart then noclipPart:Destroy() end
@@ -245,10 +244,10 @@ createButton("TP to bsjfcnjr", function() teleportToPlayer("bsjfcnjr") end)
 createButton("Reset Speed", function() setSpeed(1) end)
 createButton("Reset Jump", function() setJump(1) end)
 
--- Открытие меню по правому Shift
+-- Открытие меню по INSERT
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.RightShift then
+    if input.KeyCode == Enum.KeyCode.Insert then
         menuOpen = not menuOpen
         local goal = menuOpen and 0 or 1
         local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
@@ -275,5 +274,5 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
 end)
 
 print("=== Flagman New загружен ===")
-print("Нажмите ПРАВЫЙ SHIFT для открытия меню")
+print("Нажмите INSERT для открытия меню")
 print("Хоткеи: F - Fly, N - Noclip, G - God, S - Spider, B - Scaffold, C - Clear")
