@@ -1,278 +1,348 @@
--- Flagman New.lua
--- Открытие по Insert
--- Версия 1.1
--- Автор: good
+--[[
+  РАДУЖНОЕ МЕНЮ "НИКИТА ЛОХ"
+  Функции: Aimbot, Fly, Noclip
+  Нажмите [X] для открытия/закрытия меню
+  На мобильных: нажмите на иконку "М" в левом верхнем углу
+]]
 
-local Flagman = {
-    Name = "Flagman New",
-    Version = "1.1",
-    Author = "good"
-}
-
--- Сервисы
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local CoreGui = game:GetService("CoreGui")
+
 local LocalPlayer = Players.LocalPlayer
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-local Humanoid = Character:WaitForChild("Humanoid")
-local RootPart = Character:WaitForChild("HumanoidRootPart")
 
--- Состояния
-local flyEnabled = false
-local noclipEnabled = false
-local godEnabled = false
-local spiderEnabled = false
-local scaffoldEnabled = false
-local speedMultiplier = 1
-local jumpMultiplier = 1
-local bodyVelocity = nil
-local noclipPart = nil
-local spiderConnection = nil
-local scaffoldConnection = nil
-local menuOpen = false
+-- ============================================
+-- GUI
+-- ============================================
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "NikitaLohGui"
+screenGui.Parent = CoreGui
 
--- Создание GUI
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "FlagmanMenu"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = CoreGui
+local mainFrame = Instance.new("Frame")
+mainFrame.Name = "MainFrame"
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+mainFrame.BackgroundTransparency = 0.2
+mainFrame.BorderSizePixel = 2
+mainFrame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 400, 0, 500)
-MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-MainFrame.BackgroundTransparency = 1
-MainFrame.BorderSizePixel = 2
-MainFrame.BorderColor3 = Color3.fromRGB(100, 100, 150)
-MainFrame.ClipsDescendants = true
-MainFrame.Parent = ScreenGui
+-- Мобильная кнопка
+local mobileButton = Instance.new("TextButton")
+mobileButton.Size = UDim2.new(0, 50, 0, 50)
+mobileButton.Position = UDim2.new(0, 10, 0, 10)
+mobileButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+mobileButton.Text = "М"
+mobileButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+mobileButton.TextScaled = true
+mobileButton.Font = Enum.Font.Bold
+mobileButton.Parent = screenGui
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Position = UDim2.new(0, 0, 0, 0)
-Title.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
-Title.BackgroundTransparency = 1
-Title.Text = "Flagman New"
-Title.TextColor3 = Color3.fromRGB(255, 100, 100)
-Title.TextScaled = true
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
+mobileButton.MouseButton1Click:Connect(function()
+    mainFrame.Visible = not mainFrame.Visible
+end)
 
-local ButtonContainer = Instance.new("ScrollingFrame")
-ButtonContainer.Size = UDim2.new(1, -20, 1, -60)
-ButtonContainer.Position = UDim2.new(0, 10, 0, 50)
-ButtonContainer.BackgroundTransparency = 1
-ButtonContainer.CanvasSize = UDim2.new(0, 0, 0, 0)
-ButtonContainer.ScrollBarThickness = 6
-ButtonContainer.Parent = MainFrame
+-- Заголовок
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.Position = UDim2.new(0, 0, 0, 0)
+titleLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+titleLabel.BackgroundTransparency = 0.5
+titleLabel.Text = "НИКИТА ЛОХ"
+titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+titleLabel.TextScaled = true
+titleLabel.Font = Enum.Font.Bold
+titleLabel.Parent = mainFrame
 
-local UIListLayout = Instance.new("UIListLayout")
-UIListLayout.Padding = UDim.new(0, 8)
-UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-UIListLayout.Parent = ButtonContainer
+-- Кнопка закрытия
+local closeBtn = Instance.new("TextButton")
+closeBtn.Size = UDim2.new(0.2, 0, 0, 30)
+closeBtn.Position = UDim2.new(0.8, -10, 0, 5)
+closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+closeBtn.Text = "X"
+closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+closeBtn.TextScaled = true
+closeBtn.Font = Enum.Font.SourceSansBold
+closeBtn.Parent = mainFrame
+closeBtn.MouseButton1Click:Connect(function()
+    mainFrame.Visible = false
+end)
 
-local function createButton(text, callback)
-    local btn = Instance.new("TextButton")
-    btn.Size = UDim2.new(1, 0, 0, 40)
-    btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
-    btn.Text = text
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    btn.TextScaled = true
-    btn.Font = Enum.Font.GothamMedium
-    btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(80, 80, 120)
-    btn.Parent = ButtonContainer
-    btn.MouseButton1Click:Connect(callback)
-    btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(60, 60, 90)
+-- ============================================
+-- РАДУГА
+-- ============================================
+RunService.Heartbeat:Connect(function()
+    local hue = tick() % 2 / 2
+    local color = Color3.fromHSV(hue, 1, 1)
+    titleLabel.TextColor3 = color
+    mainFrame.BorderColor3 = color
+    mobileButton.BackgroundColor3 = color
+end)
+
+-- ============================================
+-- КНОПКИ МЕНЮ
+-- ============================================
+local toggles = {
+    Aimbot = false,
+    Fly = false,
+    Noclip = false
+}
+
+local buttons = {
+    {Name = "Aimbot", Y = 60},
+    {Name = "Fly", Y = 110},
+    {Name = "Noclip", Y = 160}
+}
+
+local buttonRefs = {}
+
+for _, btn in ipairs(buttons) do
+    local button = Instance.new("TextButton")
+    button.Name = btn.Name
+    button.Size = UDim2.new(0.8, 0, 0, 40)
+    button.Position = UDim2.new(0.1, 0, 0, btn.Y)
+    button.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.Text = btn.Name .. " [OFF]"
+    button.TextScaled = true
+    button.Font = Enum.Font.SourceSansBold
+    button.Parent = mainFrame
+    buttonRefs[btn.Name] = button
+    
+    button.MouseEnter:Connect(function()
+        local hue = tick() % 2 / 2
+        button.BackgroundColor3 = Color3.fromHSV(hue, 0.8, 0.8)
     end)
-    btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(40, 40, 60)
+    
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    end)
+    
+    button.MouseButton1Click:Connect(function()
+        toggles[btn.Name] = not toggles[btn.Name]
+        button.Text = btn.Name .. (toggles[btn.Name] and " [ON]" or " [OFF]")
+        button.TextColor3 = toggles[btn.Name] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+        
+        if btn.Name == "Fly" then
+            toggleFly()
+        elseif btn.Name == "Noclip" then
+            toggleNoclip()
+        end
     end)
 end
 
--- Функции
-local function toggleFly()
-    flyEnabled = not flyEnabled
-    if flyEnabled then
-        bodyVelocity = Instance.new("BodyVelocity")
-        bodyVelocity.MaxForce = Vector3.new(1,1,1) * 100000
-        bodyVelocity.Velocity = Vector3.new(0, 50, 0)
-        bodyVelocity.Parent = RootPart
-        print("[Flagman] Fly ON")
-    else
-        if bodyVelocity then bodyVelocity:Destroy() end
-        print("[Flagman] Fly OFF")
+-- ============================================
+-- ОТКРЫТИЕ ПО X
+-- ============================================
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    if input.KeyCode == Enum.KeyCode.X then
+        mainFrame.Visible = not mainFrame.Visible
+    end
+end)
+
+-- ============================================
+-- AIMBOT
+-- ============================================
+local function getNearestPlayer()
+    if not LocalPlayer or not LocalPlayer.Character then return nil end
+    local root = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not root then return nil end
+    
+    local nearest = nil
+    local minDist = math.huge
+    
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+            local targetRoot = player.Character.HumanoidRootPart
+            local dist = (root.Position - targetRoot.Position).Magnitude
+            if dist < minDist then
+                minDist = dist
+                nearest = player
+            end
+        end
+    end
+    return nearest
+end
+
+RunService.RenderStepped:Connect(function()
+    if toggles.Aimbot then
+        local target = getNearestPlayer()
+        if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+            local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+            if root then
+                local targetRoot = target.Character.HumanoidRootPart
+                local direction = (targetRoot.Position - root.Position).Unit
+                root.CFrame = CFrame.new(root.Position, root.Position + direction * 10)
+            end
+        end
+    end
+end)
+
+-- ============================================
+-- FLY (ИСПРАВЛЕННАЯ)
+-- ============================================
+local flyVelocity = nil
+local flyGyro = nil
+local flyConnection = nil
+local flyKeys = {W=false, A=false, S=false, D=false, Space=false, Shift=false}
+
+local function updateFly()
+    if not toggles.Fly then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    local root = character:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    
+    local forward = camera.CFrame.LookVector
+    local right = camera.CFrame.RightVector
+    local up = Vector3.new(0, 1, 0)
+    
+    local vel = Vector3.new(0, 0, 0)
+    if flyKeys.W then vel = vel + forward end
+    if flyKeys.S then vel = vel - forward end
+    if flyKeys.A then vel = vel - right end
+    if flyKeys.D then vel = vel + right end
+    if flyKeys.Space then vel = vel + up end
+    if flyKeys.Shift then vel = vel - up end
+    
+    if flyVelocity then
+        if vel.Magnitude > 0 then
+            flyVelocity.Velocity = vel.Unit * 50
+        else
+            flyVelocity.Velocity = Vector3.new(0, 0, 0)
+        end
+    end
+    
+    if flyGyro then
+        flyGyro.CFrame = CFrame.new(root.Position, root.Position + forward)
     end
 end
+
+local function toggleFly()
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    if toggles.Fly then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then humanoid.PlatformStand = true end
+        
+        local root = character:FindFirstChild("HumanoidRootPart")
+        if not root then return end
+        
+        flyVelocity = Instance.new("BodyVelocity")
+        flyVelocity.MaxForce = Vector3.new(10000, 10000, 10000)
+        flyVelocity.Velocity = Vector3.new(0, 0, 0)
+        flyVelocity.Parent = root
+        
+        flyGyro = Instance.new("BodyGyro")
+        flyGyro.MaxTorque = Vector3.new(10000, 10000, 10000)
+        flyGyro.Parent = root
+        
+        if flyConnection then flyConnection:Disconnect() end
+        flyConnection = RunService.Heartbeat:Connect(updateFly)
+        
+        -- Сброс клавиш при переключении
+        for k in pairs(flyKeys) do flyKeys[k] = false end
+    else
+        if flyConnection then flyConnection:Disconnect() flyConnection = nil end
+        if flyVelocity then flyVelocity:Destroy() flyVelocity = nil end
+        if flyGyro then flyGyro:Destroy() flyGyro = nil end
+        
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid then humanoid.PlatformStand = false end
+    end
+end
+
+-- Клавиши для Fly
+UserInputService.InputBegan:Connect(function(input, gp)
+    if gp then return end
+    if not toggles.Fly then return end
+    if input.KeyCode == Enum.KeyCode.W then flyKeys.W = true end
+    if input.KeyCode == Enum.KeyCode.A then flyKeys.A = true end
+    if input.KeyCode == Enum.KeyCode.S then flyKeys.S = true end
+    if input.KeyCode == Enum.KeyCode.D then flyKeys.D = true end
+    if input.KeyCode == Enum.KeyCode.Space then flyKeys.Space = true end
+    if input.KeyCode == Enum.KeyCode.LeftShift then flyKeys.Shift = true end
+end)
+
+UserInputService.InputEnded:Connect(function(input, gp)
+    if gp then return end
+    if not toggles.Fly then return end
+    if input.KeyCode == Enum.KeyCode.W then flyKeys.W = false end
+    if input.KeyCode == Enum.KeyCode.A then flyKeys.A = false end
+    if input.KeyCode == Enum.KeyCode.S then flyKeys.S = false end
+    if input.KeyCode == Enum.KeyCode.D then flyKeys.D = false end
+    if input.KeyCode == Enum.KeyCode.Space then flyKeys.Space = false end
+    if input.KeyCode == Enum.KeyCode.LeftShift then flyKeys.Shift = false end
+end)
+
+-- ============================================
+-- NOCLIP (ИСПРАВЛЕННАЯ)
+-- ============================================
+local noclipConnection = nil
 
 local function toggleNoclip()
-    noclipEnabled = not noclipEnabled
-    if noclipEnabled then
-        noclipPart = Instance.new("Part")
-        noclipPart.CanCollide = false
-        noclipPart.Transparency = 1
-        noclipPart.Size = Vector3.new(5,5,5)
-        noclipPart.Anchored = true
-        noclipPart.Parent = workspace
-        RunService.Heartbeat:Connect(function()
-            if noclipEnabled and RootPart then
-                noclipPart.Position = RootPart.Position
-            endend)
-        print("[Flagman] Noclip ON")
-    else
-        if noclipPart then noclipPart:Destroy() end
-        print("[Flagman] Noclip OFF")
-    end
-end
-
-local function toggleGod()
-    godEnabled = not godEnabled
-    if godEnabled then
-        Humanoid.MaxHealth = math.huge
-        Humanoid.Health = math.huge
-        print("[Flagman] God ON")
-    else
-        Humanoid.MaxHealth = 100
-        Humanoid.Health = 100
-        print("[Flagman] God OFF")
-    end
-end
-
-local function toggleSpider()
-    spiderEnabled = not spiderEnabled
-    if spiderEnabled then
-        if spiderConnection then spiderConnection:Disconnect() end
-        spiderConnection = RunService.Heartbeat:Connect(function()
-            if spiderEnabled and RootPart and Humanoid then
-                local ray = Ray.new(RootPart.Position, RootPart.CFrame.LookVector * 3)
-                local hit = workspace:FindPartOnRay(ray)
-                if hit then
-                    Humanoid.WalkSpeed = 20
-                    RootPart.Velocity = RootPart.Velocity + Vector3.new(0, -2, 0)
-                    RootPart.CFrame = RootPart.CFrame + RootPart.CFrame.LookVector * 1.5
+    local character = LocalPlayer.Character
+    if not character then return end
+    
+    if toggles.Noclip then
+        if noclipConnection then noclipConnection:Disconnect() end
+        noclipConnection = RunService.Stepped:Connect(function()
+            if not toggles.Noclip then return end
+            local char = LocalPlayer.Character
+            if char then
+                for _, part in ipairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
                 end
             end
         end)
-        print("[Flagman] Spider ON")
     else
-        if spiderConnection then spiderConnection:Disconnect() end
-        Humanoid.WalkSpeed = 16
-        print("[Flagman] Spider OFF")
-    end
-end
-
-local function toggleScaffold()
-    scaffoldEnabled = not scaffoldEnabled
-    if scaffoldEnabled then
-        if scaffoldConnection then scaffoldConnection:Disconnect() end
-        scaffoldConnection = RunService.Heartbeat:Connect(function()
-            if scaffoldEnabled and RootPart then
-                local pos = RootPart.Position
-                local below = pos - Vector3.new(0, 2.5, 0)
-                local ray = Ray.new(below, Vector3.new(0, -0.5, 0))
-                local hit = workspace:FindPartOnRay(ray)
-                if not hit then
-                    local block = Instance.new("Part")
-                    block.Size = Vector3.new(2, 0.5, 2)
-                    block.Position = below + Vector3.new(0, -0.25, 0)
-                    block.Anchored = true
-                    block.BrickColor = BrickColor.new("Bright red")
-                    block.Material = Enum.Material.SmoothPlastic
-                    block.Parent = workspace
-                    game:GetService("Debris"):AddItem(block, 5)
-                end
-            end
-        end)
-        print("[Flagman] Scaffold ON")
-    else
-        if scaffoldConnection then scaffoldConnection:Disconnect() end
-        print("[Flagman] Scaffold OFF")
-    end
-end
-
-local function setSpeed(value)
-    speedMultiplier = value or 1
-    Humanoid.WalkSpeed = 16 * speedMultiplier
-    print("[Flagman] Speed: " .. Humanoid.WalkSpeed)
-end
-
-local function setJump(value)
-    jumpMultiplier = value or 1
-    Humanoid.JumpPower = 50 * jumpMultiplier
-    print("[Flagman] Jump: " .. Humanoid.JumpPower)
-end
-
-local function clearAll()
-    for _, part in ipairs(workspace:GetDescendants()) do
-        if part:IsA("BasePart") and part ~= RootPart then
-            part:Destroy()
+        if noclipConnection then
+            noclipConnection:Disconnect()
+            noclipConnection = nil
         end
-    end
-    print("[Flagman] Cleared")
-end
-
-local function teleportToPlayer(targetName)
-    for _, plr in ipairs(Players:GetPlayers()) do
-        if plr.Name:lower():find(targetName:lower()) then
-            local targetChar = plr.Character
-            if targetChar and targetChar:FindFirstChild("HumanoidRootPart") then
-                RootPart.CFrame = targetChar.HumanoidRootPart.CFrame
-                print("[Flagman] TP to " .. plr.Name)
-                return
+        for _, part in ipairs(character:GetDescendants()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
             end
         end
     end
-    print("[Flagman] Player not found")
 end
 
--- Кнопки меню
-createButton("Fly (F)", toggleFly)
-createButton("Noclip (N)", toggleNoclip)
-createButton("Godmode (G)", toggleGod)
-createButton("Spider (S)", toggleSpider)
-createButton("Scaffold (B)", toggleScaffold)
-createButton("Speed x2", function() setSpeed(2) end)
-createButton("Speed x3", function() setSpeed(3) end)
-createButton("Jump x2", function() setJump(2) end)
-createButton("Jump x3", function() setJump(3) end)
-createButton("Clear Parts (C)", clearAll)
-createButton("TP to bsjfcnjr", function() teleportToPlayer("bsjfcnjr") end)
-createButton("Reset Speed", function() setSpeed(1) end)
-createButton("Reset Jump", function() setJump(1) end)
-
--- Открытие меню по INSERT
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.Insert then
-        menuOpen = not menuOpen
-        local goal = menuOpen and 0 or 1
-        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            BackgroundTransparency = goal
-        })
-        tween:Play()
-        MainFrame.Visible = true
-        if not menuOpen then
-            wait(0.3)
-            MainFrame.Visible = false
+-- ============================================
+-- СБРОС ПРИ ПЕРЕРОЖДЕНИИ
+-- ============================================
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    if toggles.Fly then
+        toggles.Fly = false
+        if buttonRefs.Fly then
+            buttonRefs.Fly.Text = "Fly [OFF]"
+            buttonRefs.Fly.TextColor3 = Color3.fromRGB(255, 255, 255)
         end
+        toggleFly()
+    end
+    if toggles.Noclip then
+        toggles.Noclip = false
+        if buttonRefs.Noclip then
+            buttonRefs.Noclip.Text = "Noclip [OFF]"
+            buttonRefs.Noclip.TextColor3 = Color3.fromRGB(255, 255, 255)
+        end
+        toggleNoclip()
     end
 end)
 
--- Хоткеи
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if gameProcessed then return end
-    if input.KeyCode == Enum.KeyCode.F then toggleFly() end
-    if input.KeyCode == Enum.KeyCode.N then toggleNoclip() end
-    if input.KeyCode == Enum.KeyCode.G then toggleGod() end
-    if input.KeyCode == Enum.KeyCode.S then toggleSpider() end
-    if input.KeyCode == Enum.KeyCode.B then toggleScaffold() end
-    if input.KeyCode == Enum.KeyCode.C then clearAll() end
-end)
-
-print("=== Flagman New загружен ===")
-print("Нажмите INSERT для открытия меню")
-print("Хоткеи: F - Fly, N - Noclip, G - God, S - Spider, B - Scaffold, C - Clear")
+print("═══════════════════════════════════════")
+print("  ✦ МЕНЮ НИКИТА ЛОХ ЗАГРУЖЕНО ✦")
+print("  Нажми X для открытия меню (ПК)")
+print("  Нажми кнопку 'М' (телефон)")
+print("═══════════════════════════════════════")
