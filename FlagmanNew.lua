@@ -1,53 +1,42 @@
 --[[
   РАДУЖНОЕ МЕНЮ "НИКИТА ЛОХ"
   Функции: Aimbot, Fly, Noclip
-  Нажмите [X] для открытия/закрытия меню
-  На мобильных: нажмите на иконку "М" в левом верхнем углу
+  Открытие: X, M, Insert
+  Меню по центру экрана
 ]]
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
 
 local LocalPlayer = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
 
 -- ============================================
--- GUI
+-- GUI (ПО ЦЕНТРУ)
 -- ============================================
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "NikitaLohGui"
+screenGui.ResetOnSpawn = false
 screenGui.Parent = CoreGui
 
 local mainFrame = Instance.new("Frame")
 mainFrame.Name = "MainFrame"
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0.5, -150, 0.5, -200)
+mainFrame.Size = UDim2.new(0, 320, 0, 420)
+mainFrame.Position = UDim2.new(0.5, -160, 0.5, -210)  -- ПО ЦЕНТРУ
 mainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
-mainFrame.BackgroundTransparency = 0.2
+mainFrame.BackgroundTransparency = 0.15
 mainFrame.BorderSizePixel = 2
 mainFrame.BorderColor3 = Color3.fromRGB(255, 0, 0)
+mainFrame.ClipsDescendants = true
 mainFrame.Visible = false
 mainFrame.Parent = screenGui
 
--- Мобильная кнопка
-local mobileButton = Instance.new("TextButton")
-mobileButton.Size = UDim2.new(0, 50, 0, 50)
-mobileButton.Position = UDim2.new(0, 10, 0, 10)
-mobileButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-mobileButton.Text = "М"
-mobileButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-mobileButton.TextScaled = true
-mobileButton.Font = Enum.Font.Bold
-mobileButton.Parent = screenGui
-
-mobileButton.MouseButton1Click:Connect(function()
-    mainFrame.Visible = not mainFrame.Visible
-end)
-
 -- Заголовок
 local titleLabel = Instance.new("TextLabel")
-titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.Size = UDim2.new(1, 0, 0, 45)
 titleLabel.Position = UDim2.new(0, 0, 0, 0)
 titleLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
 titleLabel.BackgroundTransparency = 0.5
@@ -59,10 +48,10 @@ titleLabel.Parent = mainFrame
 
 -- Кнопка закрытия
 local closeBtn = Instance.new("TextButton")
-closeBtn.Size = UDim2.new(0.2, 0, 0, 30)
-closeBtn.Position = UDim2.new(0.8, -10, 0, 5)
+closeBtn.Size = UDim2.new(0.15, 0, 0, 30)
+closeBtn.Position = UDim2.new(0.85, -5, 0, 8)
 closeBtn.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
-closeBtn.Text = "X"
+closeBtn.Text = "✕"
 closeBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 closeBtn.TextScaled = true
 closeBtn.Font = Enum.Font.SourceSansBold
@@ -79,7 +68,6 @@ RunService.Heartbeat:Connect(function()
     local color = Color3.fromHSV(hue, 1, 1)
     titleLabel.TextColor3 = color
     mainFrame.BorderColor3 = color
-    mobileButton.BackgroundColor3 = color
 end)
 
 -- ============================================
@@ -91,56 +79,62 @@ local toggles = {
     Noclip = false
 }
 
-local buttons = {
-    {Name = "Aimbot", Y = 60},
-    {Name = "Fly", Y = 110},
-    {Name = "Noclip", Y = 160}
-}
-
 local buttonRefs = {}
 
-for _, btn in ipairs(buttons) do
-    local button = Instance.new("TextButton")
-    button.Name = btn.Name
-    button.Size = UDim2.new(0.8, 0, 0, 40)
-    button.Position = UDim2.new(0.1, 0, 0, btn.Y)
-    button.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
-    button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    button.Text = btn.Name .. " [OFF]"
-    button.TextScaled = true
-    button.Font = Enum.Font.SourceSansBold
-    button.Parent = mainFrame
-    buttonRefs[btn.Name] = button
+local function createButton(name, y)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(0.8, 0, 0, 40)
+    btn.Position = UDim2.new(0.1, 0, 0, y)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Text = name .. " [OFF]"
+    btn.TextScaled = true
+    btn.Font = Enum.Font.SourceSansBold
+    btn.Parent = mainFrame
+    buttonRefs[name] = btn
     
-    button.MouseEnter:Connect(function()
+    btn.MouseEnter:Connect(function()
         local hue = tick() % 2 / 2
-        button.BackgroundColor3 = Color3.fromHSV(hue, 0.8, 0.8)
+        btn.BackgroundColor3 = Color3.fromHSV(hue, 0.8, 0.8)
     end)
     
-    button.MouseLeave:Connect(function()
-        button.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
+    btn.MouseLeave:Connect(function()
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 70)
     end)
     
-    button.MouseButton1Click:Connect(function()
-        toggles[btn.Name] = not toggles[btn.Name]
-        button.Text = btn.Name .. (toggles[btn.Name] and " [ON]" or " [OFF]")
-        button.TextColor3 = toggles[btn.Name] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
+    btn.MouseButton1Click:Connect(function()
+        toggles[name] = not toggles[name]
+        btn.Text = name .. (toggles[name] and " [ON]" or " [OFF]")
+        btn.TextColor3 = toggles[name] and Color3.fromRGB(0, 255, 0) or Color3.fromRGB(255, 255, 255)
         
-        if btn.Name == "Fly" then
+        if name == "Fly" then
             toggleFly()
-        elseif btn.Name == "Noclip" then
+        elseif name == "Noclip" then
             toggleNoclip()
         end
     end)
 end
 
+createButton("Aimbot", 60)
+createButton("Fly", 110)
+createButton("Noclip", 160)
+
 -- ============================================
--- ОТКРЫТИЕ ПО X
+-- ОТКРЫТИЕ ПО X, M, Insert
 -- ============================================
+local function toggleMenu()
+    mainFrame.Visible = not mainFrame.Visible
+end
+
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.X then
-        mainFrame.Visible = not mainFrame.Visible
+        toggleMenu()
+    elseif input.KeyCode == Enum.KeyCode.M then
+        toggleMenu()
+    elseif input.KeyCode == Enum.KeyCode.Insert then
+        toggleMenu()
     end
 end)
 
@@ -197,7 +191,7 @@ local function updateFly()
     local root = character:FindFirstChild("HumanoidRootPart")
     if not root then return end
     
-    local camera = workspace.CurrentCamera
+    local camera = Camera
     if not camera then return end
     
     local forward = camera.CFrame.LookVector
@@ -248,7 +242,6 @@ local function toggleFly()
         if flyConnection then flyConnection:Disconnect() end
         flyConnection = RunService.Heartbeat:Connect(updateFly)
         
-        -- Сброс клавиш при переключении
         for k in pairs(flyKeys) do flyKeys[k] = false end
     else
         if flyConnection then flyConnection:Disconnect() flyConnection = nil end
@@ -260,7 +253,6 @@ local function toggleFly()
     end
 end
 
--- Клавиши для Fly
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if not toggles.Fly then return end
@@ -343,6 +335,6 @@ end)
 
 print("═══════════════════════════════════════")
 print("  ✦ МЕНЮ НИКИТА ЛОХ ЗАГРУЖЕНО ✦")
-print("  Нажми X для открытия меню (ПК)")
-print("  Нажми кнопку 'М' (телефон)")
+print("  Открытие: X, M, Insert")
+print("  Меню по центру экрана")
 print("═══════════════════════════════════════")
