@@ -1,17 +1,20 @@
--- FlagmanSimple.lua
--- Простая, но мощная менюха для Xeno
--- Всё работает плавно, без багов
+-- FlagmanUltimateV2.lua
+-- Улучшенная версия: WASD-полёт + регулировка скорости + вкладки + снежинки
+-- Версия 4.0
+-- Автор: good
 
+-- ====== СЕРВИСЫ ======
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CoreGui = game:GetService("CoreGui")
+local TweenService = game:GetService("TweenService")
 
 local player = Players.LocalPlayer
 if not player then return end
 
--- ====== ФУНКЦИИ ДЛЯ ПЕРСОНАЖА ======
+-- ====== ПЕРСОНАЖ (с обновлением) ======
 local function getChar() return player.Character or player.CharacterAdded:Wait() end
 local function getHumanoid() return getChar():WaitForChild("Humanoid") end
 local function getRoot() return getChar():FindFirstChild("HumanoidRootPart") end
@@ -23,18 +26,17 @@ local state = {
     god = false,
     spider = false,
     scaffold = false,
-    flySpeed = 50,
+    flySpeed = 50,          -- скорость полёта
     speedMult = 1,
     jumpMult = 1,
 }
-local flyVel = nil
+local flyBodyVel = nil
 local noclipPart = nil
 local spiderConn = nil
 local scaffoldConn = nil
 
--- ====== УПРАВЛЕНИЕ ПОЛЁТОМ (WASD) ======
+-- ====== УПРАВЛЕНИЕ ПОЛЁТОМ (WASD + ПРОБЕЛ + SHIFT) ======
 local keys = { w = false, a = false, s = false, d = false, space = false, shift = false }
-local flyBodyVel = nil
 
 local function updateFly()
     if not state.fly then return end
@@ -59,6 +61,7 @@ local function updateFly()
     flyBodyVel.Velocity = dir
 end
 
+-- Отслеживание нажатий
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     local key = input.KeyCode
@@ -187,6 +190,13 @@ local function toggleScaffold()
     print("[Flagman] Scaffold " .. (state.scaffold and "ON" or "OFF"))
 end
 
+-- Регулировка скорости полёта (кнопки в меню)
+local function changeFlySpeed(delta)
+    state.flySpeed = math.max(10, state.flySpeed + delta)
+    if state.fly then updateFly() end
+    print("[Flagman] Fly Speed: " .. state.flySpeed)
+end
+
 local function setSpeed(mult)
     state.speedMult = mult
     local hum = getHumanoid()
@@ -255,84 +265,220 @@ local function toggleVisual(name)
     end
 end
 
--- ====== МЕНЮ (МИНИМАЛИСТИЧНОЕ) ======
+-- ====== GUI (с снежинками) ======
 local gui = Instance.new("ScreenGui")
-gui.Name = "FlagmanGUI"
+gui.Name = "FlagmanUltimateV2"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
+-- Слой снежинок
+local snowLayer = Instance.new("Frame")
+snowLayer.Size = UDim2.new(1, 0, 1, 0)
+snowLayer.BackgroundTransparency = 1
+snowLayer.ZIndex = 0
+snowLayer.Parent = gui
+
+local snowflakes = {}
+for i = 1, 30 do
+    local sf = Instance.new("Frame")
+    local size = 2 + math.random() * 4
+    sf.Size = UDim2.new(0, size, 0, size)
+    sf.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    sf.BackgroundTransparency = 0.3 + math.random() * 0.5
+    sf.BorderSizePixel = 0
+    sf.Position = UDim2.new(math.random(), 0, math.random(), 0)
+    sf.Parent = snowLayer
+    local data = {
+        x = math.random() * 100,
+        y = math.random() * 100,
+        speed = 0.5 + math.random() * 1.5,
+        drift = (math.random() - 0.5) * 0.3,
+    }
+    snowflakes[i] = { frame = sf, data = data }
+end
+
+RunService.Heartbeat:Connect(function(dt)
+    for _, sf in ipairs(snowflakes) do
+        local d = sf.data
+        d.y = d.y + d.speed * dt * 60
+        d.x = d.x + d.drift * dt * 60
+        if d.y > 100 then d.y = -2; d.x = math.random() * 100 end
+        if d.x > 100 then d.x = 0 end
+        if d.x < 0 then d.x = 100 end
+        sf.frame.Position = UDim2.new(d.x / 100, 0, d.y / 100, 0)
+    end
+end)
+
+-- Основное меню (тёмное, но без затемнения)
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 300, 0, 400)
-frame.Position = UDim2.new(0.5, -150, 0.5, -200)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 35)
+frame.Size = UDim2.new(0, 350, 0, 450)
+frame.Position = UDim2.new(0.5, -175, 0.5, -225)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 30)
 frame.BackgroundTransparency = 0.15
 frame.BorderSizePixel = 2
 frame.BorderColor3 = Color3.fromRGB(200, 200, 255)
+frame.ClipsDescendants = true
 frame.Visible = false
+frame.ZIndex = 2
 frame.Parent = gui
 
 local title = Instance.new("TextLabel")
-title.Size = UDim2.new(1, 0, 0, 40)
+title.Size = UDim2.new(1, 0, 0, 45)
 title.BackgroundTransparency = 1
-title.Text = "❄ Flagman ❄"
+title.Text = "❄ Flagman Ultimate V2 ❄"
 title.TextColor3 = Color3.fromRGB(255, 255, 255)
 title.TextScaled = true
 title.Font = Enum.Font.GothamBold
 title.Parent = frame
 
+-- Вкладки
+local tabContainer = Instance.new("Frame")
+tabContainer.Size = UDim2.new(1, -20, 0, 35)
+tabContainer.Position = UDim2.new(0, 10, 0, 50)
+tabContainer.BackgroundTransparency = 1
+tabContainer.Parent = frame
+
+local visTab = Instance.new("TextButton")
+visTab.Size = UDim2.new(0.5, -5, 1, 0)
+visTab.Position = UDim2.new(0, 0, 0, 0)
+visTab.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+visTab.Text = "Визуал"
+visTab.TextColor3 = Color3.fromRGB(255,255,255)
+visTab.TextScaled = true
+visTab.Font = Enum.Font.GothamMedium
+visTab.BorderSizePixel = 1
+visTab.BorderColor3 = Color3.fromRGB(200,200,255)
+visTab.Parent = tabContainer
+
+local cheatTab = Instance.new("TextButton")
+cheatTab.Size = UDim2.new(0.5, -5, 1, 0)
+cheatTab.Position = UDim2.new(0.5, 5, 0, 0)
+cheatTab.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
+cheatTab.Text = "Читы"
+cheatTab.TextColor3 = Color3.fromRGB(255,255,255)
+cheatTab.TextScaled = true
+cheatTab.Font = Enum.Font.GothamMedium
+cheatTab.BorderSizePixel = 1
+cheatTab.BorderColor3 = Color3.fromRGB(200,200,255)
+cheatTab.Parent = tabContainer
+
+-- Контейнер кнопок
 local container = Instance.new("ScrollingFrame")
-container.Size = UDim2.new(1, -20, 1, -60)
-container.Position = UDim2.new(0, 10, 0, 50)
+container.Size = UDim2.new(1, -20, 1, -100)
+container.Position = UDim2.new(0, 10, 0, 90)
 container.BackgroundTransparency = 1
 container.CanvasSize = UDim2.new(0, 0, 0, 0)
 container.ScrollBarThickness = 6
 container.Parent = frame
 
 local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 6)
+layout.Padding = UDim.new(0, 5)
 layout.SortOrder = Enum.SortOrder.LayoutOrder
 layout.Parent = container
 
-local function btn(text, callback)
-    local b = Instance.new("TextButton")
-    b.Size = UDim2.new(1, 0, 0, 32)
-    b.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
-    b.Text = text
-    b.TextColor3 = Color3.fromRGB(255, 255, 255)
-    b.TextScaled = true
-    b.Font = Enum.Font.GothamMedium
-    b.BorderSizePixel = 1
-    b.BorderColor3 = Color3.fromRGB(150, 150, 200)
-    b.Parent = container
-    b.MouseButton1Click:Connect(callback)
-    b.MouseEnter:Connect(function() b.BackgroundColor3 = Color3.fromRGB(65, 65, 100) end)
-    b.MouseLeave:Connect(function() b.BackgroundColor3 = Color3.fromRGB(45, 45, 70) end)
-    return b
+-- Функция создания кнопки (переключатель)
+local function createToggle(text, getState, setState)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
+    btn.Text = text .. " [OFF]"
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamMedium
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(150,150,200)
+    btn.Parent = container
+
+    local function update()
+        local s = getState()
+        btn.Text = text .. (s and " [ON]" or " [OFF]")
+        btn.BackgroundColor3 = s and Color3.fromRGB(30, 90, 40) or Color3.fromRGB(45, 45, 70)
+    end
+    update()
+
+    btn.MouseButton1Click:Connect(function()
+        setState(not getState())
+        update()
+    end)
+    btn.MouseEnter:Connect(function()
+        btn.BackgroundColor3 = getState() and Color3.fromRGB(50, 130, 60) or Color3.fromRGB(65, 65, 100)
+    end)
+    btn.MouseLeave:Connect(function() update() end)
+    return btn
 end
 
--- Кнопки
-btn("🪶 Fly (WASD)", toggleFly)
-btn("🚪 Noclip", toggleNoclip)
-btn("🛡️ God", toggleGod)
-btn("🕷️ Spider", toggleSpider)
-btn("🧱 Scaffold", toggleScaffold)
-btn("⚡ Speed x2", function() setSpeed(2) end)
-btn("⚡ Speed x3", function() setSpeed(3) end)
-btn("🦘 Jump x2", function() setJump(2) end)
-btn("🦘 Jump x3", function() setJump(3) end)
-btn("🌫️ Туман", function() toggleVisual("atmos") end)
-btn("☀️ Лучи", function() toggleVisual("sun") end)
-btn("🎨 Цвет", function() toggleVisual("color") end)
-btn("💡 Свечение", function() toggleVisual("bloom") end)
-btn("📷 Размытие", function() toggleVisual("dof") end)
-btn("☀️ День", function() Lighting.ClockTime = 14 end)
-btn("🌆 Вечер", function() Lighting.ClockTime = 18 end)
-btn("🌙 Ночь", function() Lighting.ClockTime = 0 end)
-btn("🧹 Clear Parts", clearParts)
-btn("📌 TP to bsjfcnjr", function() teleportTo("bsjfcnjr") end)
-btn("🔄 Reset Speed/Jump", function() setSpeed(1); setJump(1) end)
+-- Функция создания кнопки-действия
+local function createAction(text, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(1, 0, 0, 32)
+    btn.BackgroundColor3 = Color3.fromRGB(45, 45, 70)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(255,255,255)
+    btn.TextScaled = true
+    btn.Font = Enum.Font.GothamMedium
+    btn.BorderSizePixel = 1
+    btn.BorderColor3 = Color3.fromRGB(150,150,200)
+    btn.Parent = container
+    btn.MouseButton1Click:Connect(callback)
+    btn.MouseEnter:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(65, 65, 100) end)
+    btn.MouseLeave:Connect(function() btn.BackgroundColor3 = Color3.fromRGB(45, 45, 70) end)
+    return btn
+end
 
--- Открытие по Insert
+-- ====== ЗАПОЛНЕНИЕ ВКЛАДОК ======
+local function fillVisual()
+    for _, child in ipairs(container:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    createToggle("🌫️ Туман", function() return visualOn.atmos end, function(v) toggleVisual("atmos") end)
+    createToggle("☀️ Лучи", function() return visualOn.sun end, function(v) toggleVisual("sun") end)
+    createToggle("🎨 Цветокоррекция", function() return visualOn.color end, function(v) toggleVisual("color") end)
+    createToggle("💡 Свечение", function() return visualOn.bloom end, function(v) toggleVisual("bloom") end)
+    createToggle("📷 Размытие", function() return visualOn.dof end, function(v) toggleVisual("dof") end)
+    createAction("☀️ День", function() Lighting.ClockTime = 14 end)
+    createAction("🌆 Вечер", function() Lighting.ClockTime = 18 end)
+    createAction("🌙 Ночь", function() Lighting.ClockTime = 0 end)
+end
+
+local function fillCheats()
+    for _, child in ipairs(container:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+    createToggle("🪶 Fly (WASD)", function() return state.fly end, function(v) toggleFly() end)
+    createToggle("🚪 Noclip", function() return state.noclip end, function(v) toggleNoclip() end)
+    createToggle("🛡️ God", function() return state.god end, function(v) toggleGod() end)
+    createToggle("🕷️ Spider", function() return state.spider end, function(v) toggleSpider() end)
+    createToggle("🧱 Scaffold", function() return state.scaffold end, function(v) toggleScaffold() end)
+    
+    -- Регулировка скорости полёта
+    createAction("⬆️ Fly Speed +10", function() changeFlySpeed(10) end)
+    createAction("⬇️ Fly Speed -10", function() changeFlySpeed(-10) end)
+    createAction("⚡ Speed x2", function() setSpeed(2) end)
+    createAction("⚡ Speed x3", function() setSpeed(3) end)
+    createAction("🦘 Jump x2", function() setJump(2) end)
+    createAction("🦘 Jump x3", function() setJump(3) end)
+    createAction("🧹 Clear Parts", clearParts)
+    createAction("📌 TP to bsjfcnjr", function() teleportTo("bsjfcnjr") end)
+    createAction("🔄 Reset Speed/Jump", function() setSpeed(1); setJump(1) end)
+end
+
+-- Переключение вкладок
+visTab.MouseButton1Click:Connect(function()
+    visTab.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+    cheatTab.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
+    fillVisual()
+end)
+cheatTab.MouseButton1Click:Connect(function()
+    cheatTab.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+    visTab.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
+    fillCheats()
+end)
+
+-- По умолчанию открываем Читы (чтобы сразу видеть управление полётом)
+fillCheats()
+cheatTab.BackgroundColor3 = Color3.fromRGB(60, 60, 100)
+
+-- ====== ОТКРЫТИЕ МЕНЮ ПО INSERT ======
 local open = false
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
@@ -342,7 +488,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     end
 end)
 
--- Хоткеи
+-- ====== ХОТКЕИ ======
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
     if input.KeyCode == Enum.KeyCode.F then toggleFly() end
@@ -353,5 +499,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if input.KeyCode == Enum.KeyCode.C then clearParts() end
 end)
 
-print("=== Flagman Simple загружен ===")
+print("=== Flagman Ultimate V2 загружен ===")
 print("Insert — меню, WASD — полёт, F/N/G/S/B/C — хоткеи")
+print("Скорость полёта регулируется кнопками в меню (Читы)")
