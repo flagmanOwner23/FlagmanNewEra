@@ -1,6 +1,5 @@
 -- FlagmanUltimate_Fixed.lua
--- Исправленная версия для Xeno
--- Версия 3.1
+-- Версия 3.2 – исправлено затемнение меню
 -- Автор: good
 
 -- ====== СЕРВИСЫ ======
@@ -17,7 +16,7 @@ if not player then
     return
 end
 
--- ====== ФУНКЦИЯ ДЛЯ ПОЛУЧЕНИЯ ПЕРСОНАЖА ======
+-- ====== ФУНКЦИИ ДЛЯ ПЕРСОНАЖА (с переподключением) ======
 local function getChar()
     local char = player.Character
     if not char then
@@ -61,7 +60,6 @@ local success, err = pcall(function()
     screenGui.Parent = CoreGui
 end)
 if not success then
-    -- если CoreGui не доступен, используем PlayerGui
     local playerGui = player:FindFirstChild("PlayerGui") or player:WaitForChild("PlayerGui")
     screenGui = Instance.new("ScreenGui")
     screenGui.Name = "FlagmanUltimate"
@@ -74,14 +72,13 @@ if not screenGui then
     return
 end
 
--- ====== СЛОЙ СНЕЖИНОК ======
+-- ====== СНЕЖИНКИ ======
 local SnowLayer = Instance.new("Frame")
 SnowLayer.Size = UDim2.new(1, 0, 1, 0)
 SnowLayer.BackgroundTransparency = 1
 SnowLayer.ZIndex = 0
 SnowLayer.Parent = screenGui
 
--- Создаём 30 снежинок (меньше, чтобы не грузить)
 local snowflakes = {}
 for i = 1, 30 do
     local sf = Instance.new("Frame")
@@ -101,7 +98,6 @@ for i = 1, 30 do
     snowflakes[i] = { frame = sf, data = data }
 end
 
--- Анимация снежинок (в отдельном потоке)
 RunService.Heartbeat:Connect(function(dt)
     for _, sf in ipairs(snowflakes) do
         local d = sf.data
@@ -117,12 +113,12 @@ RunService.Heartbeat:Connect(function(dt)
     end
 end)
 
--- ====== ГЛАВНОЕ МЕНЮ ======
+-- ====== ГЛАВНОЕ МЕНЮ (с полупрозрачным фоном) ======
 local MainFrame = Instance.new("Frame")
 MainFrame.Size = UDim2.new(0, 400, 0, 500)
 MainFrame.Position = UDim2.new(0.5, -200, 0.5, -250)
-MainFrame.BackgroundColor3 = Color3.fromRGB(10, 10, 20)
-MainFrame.BackgroundTransparency = 1
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 30)  -- тёмно-синий
+MainFrame.BackgroundTransparency = 0.2   -- полупрозрачный, чтобы видеть игру
 MainFrame.BorderSizePixel = 2
 MainFrame.BorderColor3 = Color3.fromRGB(180, 180, 255)
 MainFrame.ClipsDescendants = true
@@ -130,11 +126,12 @@ MainFrame.Visible = false
 MainFrame.ZIndex = 2
 MainFrame.Parent = screenGui
 
+-- Заголовок
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 50)
 Title.BackgroundTransparency = 1
 Title.Text = "❄ Flagman Ultimate ❄"
-Title.TextColor3 = Color3.fromRGB(200, 220, 255)
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)  -- белый
 Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
 Title.Parent = MainFrame
@@ -149,13 +146,13 @@ TabContainer.Parent = MainFrame
 local visualTabBtn = Instance.new("TextButton")
 visualTabBtn.Size = UDim2.new(0.5, -5, 1, 0)
 visualTabBtn.Position = UDim2.new(0, 0, 0, 0)
-visualTabBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 70)
+visualTabBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 120)
 visualTabBtn.Text = "Визуал"
 visualTabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 visualTabBtn.TextScaled = true
 visualTabBtn.Font = Enum.Font.GothamMedium
 visualTabBtn.BorderSizePixel = 1
-visualTabBtn.BorderColor3 = Color3.fromRGB(100, 100, 200)
+visualTabBtn.BorderColor3 = Color3.fromRGB(200, 200, 255)
 visualTabBtn.Parent = TabContainer
 
 local cheatTabBtn = Instance.new("TextButton")
@@ -170,6 +167,7 @@ cheatTabBtn.BorderSizePixel = 1
 cheatTabBtn.BorderColor3 = Color3.fromRGB(100, 100, 200)
 cheatTabBtn.Parent = TabContainer
 
+-- Контейнер для кнопок
 local ContentContainer = Instance.new("ScrollingFrame")
 ContentContainer.Size = UDim2.new(1, -20, 1, -110)
 ContentContainer.Position = UDim2.new(0, 10, 0, 100)
@@ -183,7 +181,7 @@ UIListLayout.Padding = UDim.new(0, 6)
 UIListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 UIListLayout.Parent = ContentContainer
 
--- ====== СОЗДАНИЕ ВИЗУАЛЬНЫХ ЭФФЕКТОВ (с защитой) ======
+-- ====== ВИЗУАЛЬНЫЕ ЭФФЕКТЫ (с защитой) ======
 local function safeCreate(className, props)
     local success, obj = pcall(function()
         local existing = Lighting:FindFirstChildOfClass(className)
@@ -194,13 +192,12 @@ local function safeCreate(className, props)
         return newObj
     end)
     if not success then
-        print("[Flagman] Ошибка создания " .. className .. ": " .. tostring(obj))
+        print("[Flagman] Ошибка создания " .. className)
         return nil
     end
     return obj
 end
 
--- Создаём эффекты (без Rain/Snow, чтобы не было ошибок)
 local atmosphere = safeCreate("Atmosphere", {
     Density = 0.35, Offset = 0.25, Color = Color3.fromRGB(190,210,235),
     Decay = Color3.fromRGB(100,110,140), Glaire = 0.4, Haze = 2, Enabled = true,
@@ -213,7 +210,6 @@ local colorCorr = safeCreate("ColorCorrectionEffect", {
 local bloom = safeCreate("BloomEffect", { Intensity = 0.4, Size = 24, Threshold = 0.8, Enabled = true })
 local dof = safeCreate("DepthOfFieldEffect", { FarIntensity = 0.3, InNearBlur = 0, NearIntensity = 0, Enabled = true })
 
--- Включаем освещение
 pcall(function()
     Lighting.Technology = Enum.Technology.Future
     Lighting.GlobalShadows = true
@@ -222,7 +218,6 @@ pcall(function()
     Lighting.ClockTime = 14
 end)
 
--- Состояния для визуала
 local visualStates = {
     atmosphere = true, sunRays = true, colorCorr = true, bloom = true, dof = true,
 }
@@ -411,23 +406,24 @@ local function clearParts()
     print("[Flagman] Cleared")
 end
 
--- ====== СОЗДАНИЕ КНОПОК ======
+-- ====== СОЗДАНИЕ КНОПОК (яркие, контрастные) ======
 local function createToggle(text, getState, setState)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 36)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)  -- ярче фон
     btn.Text = text .. " [OFF]"
-    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)    -- белый текст
     btn.TextScaled = true
     btn.Font = Enum.Font.GothamMedium
     btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(80, 80, 120)
+    btn.BorderColor3 = Color3.fromRGB(200, 200, 255)
     btn.Parent = ContentContainer
 
     local function update()
         local state = getState()
         btn.Text = text .. (state and " [ON]" or " [OFF]")
-        btn.BackgroundColor3 = state and Color3.fromRGB(20, 70, 40) or Color3.fromRGB(30, 30, 50)
+        btn.BackgroundColor3 = state and Color3.fromRGB(30, 120, 40) or Color3.fromRGB(50, 50, 80)
+        btn.TextColor3 = state and Color3.fromRGB(255, 255, 200) or Color3.fromRGB(255, 255, 255)
     end
     update()
 
@@ -437,10 +433,10 @@ local function createToggle(text, getState, setState)
     end)
 
     btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = getState() and Color3.fromRGB(40, 100, 60) or Color3.fromRGB(50, 50, 80)
+        btn.BackgroundColor3 = getState() and Color3.fromRGB(50, 180, 60) or Color3.fromRGB(70, 70, 110)
     end)
     btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = getState() and Color3.fromRGB(20, 70, 40) or Color3.fromRGB(30, 30, 50)
+        update()
     end)
     return btn
 end
@@ -448,20 +444,20 @@ end
 local function createAction(text, callback)
     local btn = Instance.new("TextButton")
     btn.Size = UDim2.new(1, 0, 0, 36)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
     btn.Text = text
     btn.TextColor3 = Color3.fromRGB(255, 255, 255)
     btn.TextScaled = true
     btn.Font = Enum.Font.GothamMedium
     btn.BorderSizePixel = 1
-    btn.BorderColor3 = Color3.fromRGB(80, 80, 120)
+    btn.BorderColor3 = Color3.fromRGB(200, 200, 255)
     btn.Parent = ContentContainer
     btn.MouseButton1Click:Connect(callback)
     btn.MouseEnter:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+        btn.BackgroundColor3 = Color3.fromRGB(70, 70, 110)
     end)
     btn.MouseLeave:Connect(function()
-        btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+        btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
     end)
     return btn
 end
@@ -512,26 +508,18 @@ cheatTabBtn.MouseButton1Click:Connect(function()
     fillCheats()
 end)
 
--- Открываем по умолчанию визуал
+-- По умолчанию визуал
 fillVisual()
 visualTabBtn.BackgroundColor3 = Color3.fromRGB(70, 70, 120)
 
--- ====== ОТКРЫТИЕ/ЗАКРЫТИЕ ПО INSERT ======
+-- ====== ОТКРЫТИЕ/ЗАКРЫТИЕ БЕЗ АНИМАЦИИ (чтобы не было затемнения) ======
 local menuOpen = false
 UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if gameProcessed then return end
     if input.KeyCode == Enum.KeyCode.Insert then
         menuOpen = not menuOpen
-        MainFrame.Visible = true
-        local goal = menuOpen and 0 or 1
-        local tween = TweenService:Create(MainFrame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
-            BackgroundTransparency = goal
-        })
-        tween:Play()
-        if not menuOpen then
-            wait(0.3)
-            MainFrame.Visible = false
-        end
+        MainFrame.Visible = menuOpen
+        -- Если нужно плавное появление, можно использовать Tween, но оставим мгновенное
     end
 end)
 
@@ -546,6 +534,6 @@ UserInputService.InputBegan:Connect(function(input, gameProcessed)
     if input.KeyCode == Enum.KeyCode.C then clearParts() end
 end)
 
-print("=== Flagman Ultimate исправлен ===")
-print("Нажми INSERT для меню")
+print("=== Flagman Ultimate исправлен (без затемнения) ===")
+print("Нажми INSERT для открытия меню")
 print("Хоткеи: F, N, G, S, B, C")
